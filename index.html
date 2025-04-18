@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TipJarV1 | Monad Blockchain</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.ethers.io/lib/ethers-5.7.umd.min.js"></script>
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #6b46c1 0%, #805ad5 50%, #9f7aea 100%);
+        }
+        .tip-card {
+            transition: all 0.3s ease;
+        }
+        .tip-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+        .dark .dark\:bg-gray-800 {
+            background-color: #1a202c;
+        }
+        .dark .dark\:text-white {
+            color: #fff;
+        }
+        .dark .dark\:bg-gray-700 {
+            background-color: #2d3748;
+        }
+        .dark .dark\:border-gray-600 {
+            border-color: #4a5568;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 dark:bg-gray-900 min-h-screen transition-colors duration-200">
+    <div class="container mx-auto px-4 py-8">
+        <!-- Header -->
+        <header class="flex justify-between items-center mb-12">
+            <div class="flex items-center">
+                <div class="w-10 h-10 rounded-full gradient-bg flex items-center justify-center mr-3">
+                    <i class="fas fa-coins text-white"></i>
+                </div>
+                <h1 class="text-2xl font-bold text-gray-800 dark:text-white">TipJarV1</h1>
+            </div>
+            <div class="flex items-center space-x-4">
+                <button id="themeToggle" class="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
+                    <i class="fas fa-moon dark:hidden"></i>
+                    <i class="fas fa-sun hidden dark:block text-yellow-300"></i>
+                </button>
+                <button id="connectWallet" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg flex items-center">
+                    <i class="fas fa-wallet mr-2"></i>
+                    <span>Connect Wallet</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Send Tip Section -->
+            <div class="lg:col-span-1 bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+                <h2 class="text-xl font-semibold text-gray-800 dark:text-white mb-4">Send a Tip</h2>
+                
+                <div class="mb-4">
+                    <label for="tipMessage" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Your Message</label>
+                    <textarea id="tipMessage" rows="3" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white" placeholder="Say something nice..."></textarea>
+                </div>
+                
+                <div class="mb-6">
+                    <label for="tipAmount" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Amount (MON)</label>
+                    <div class="relative">
+                        <input type="number" id="tipAmount" step="0.01" min="0.01" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white" placeholder="0.01">
+                        <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                            <span class="text-gray-500 dark:text-gray-400">MON</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <button id="sendTip" class="w-full px-4 py-3 gradient-bg hover:opacity-90 text-white rounded-lg font-medium flex items-center justify-center">
+                    <i class="fas fa-paper-plane mr-2"></i>
+                    Send Tip
+                </button>
+                
+                <div class="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm font-medium text-gray-600 dark:text-gray-300">Contract Balance:</span>
+                        <span id="contractBalance" class="text-lg font-semibold text-indigo-600 dark:text-indigo-400">0 MON</span>
+                    </div>
+                    <div class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                        Contract: 0x9A9F...1BA
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Tips History Section -->
+            <div class="lg:col-span-2">
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-xl font-semibold text-gray-800 dark:text-white">Recent Tips</h2>
+                        <div class="relative">
+                            <button id="refreshTips" class="px-3 py-1 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-white rounded-lg flex items-center">
+                                <i class="fas fa-sync-alt mr-2"></i>
+                                Refresh
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div id="tipsList" class="space-y-4">
+                        <!-- Tips will be loaded here -->
+                        <div class="text-center py-8">
+                            <i class="fas fa-spinner fa-spin text-2xl text-gray-400"></i>
+                            <p class="mt-2 text-gray-500 dark:text-gray-400">Loading tips...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Transaction Modal -->
+    <div id="transactionModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white dark:bg-gray-800 rounded-xl p-6 max-w-md w-full mx-4">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold text-gray-800 dark:text-white" id="modalTitle">Processing Transaction</h3>
+                <button id="closeModal" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="text-center py-4">
+                <div id="modalSpinner" class="inline-block">
+                    <i class="fas fa-spinner fa-spin text-4xl text-indigo-600 dark:text-indigo-400"></i>
+                </div>
+                <div id="modalSuccess" class="hidden">
+                    <div class="w-16 h-16 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="fas fa-check text-3xl text-green-600 dark:text-green-400"></i>
+                    </div>
+                </div>
+                <div id="modalError" class="hidden">
+                    <div class="w-16 h-16 bg-red-100 dark:bg-red-900 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="fas fa-times text-3xl text-red-600 dark:text-red-400"></i>
+                    </div>
+                </div>
+                <p id="modalMessage" class="mt-4 text-gray-700 dark:text-gray-300">Waiting for transaction confirmation...</p>
+            </div>
+            <div class="mt-6 flex justify-center">
+                <button id="modalAction" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg hidden">
+                    Continue
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Contract ABI - Replace with your actual ABI if different
+        const contractABI = [
+            {
+                "inputs": [],
+                "stateMutability": "nonpayable",
+                "type": "constructor"
+            },
+            {
+                "anonymous": false,
+                "inputs": [
+                    {
+                        "indexed": true,
+                        "internalType": "address",
+                        "name": "previousOwner",
+                        "type": "address"
+                    },
+                    {
+                        "indexed": true,
+                        "internalType": "address",
+                        "name": "newOwner",
+                        "type": "address"
+                    }
+                ],
+                "name": "OwnershipTransferred",
+                "type": "event"
+            },
+            {
+                "anonymous": false,
+                "inputs": [
+                    {
+                        "indexed": true,
+                        "internalType": "address",
+                        "name": "sender",
+                        "type": "address"
+                    },
+                    {
+                        "indexed": false,
+                        "internalType": "uint256",
+                        "name": "amount",
+                        "type": "uint256"
+                    },
+                    {
+                        "indexed": false,
+                        "internalType": "string",
+                        "name": "message",
+                        "type": "string"
+                    },
+                    {
+                        "indexed": false,
+                        "internalType": "uint256",
+                        "name": "timestamp",
+                        "type": "uint256"
+                    }
+                ],
+                "name": "TipReceived",
+                "type": "event"
+            },
+            {
+                "inputs": [],
+                "name": "getAllTips",
+                "outputs": [
+                    {
+                        "components": [
+                            {
+                                "internalType": "address",
+                                "name": "sender",
+                                "type": "address"
+                            },
+                            {
+                                "internalType": "uint256",
+                                "name": "amount",
+                                "type": "uint256"
+                            },
+                            {
+                                "internalType": "string",
+                                "name": "message",
+                                "type": "string"
+                            },
+                            {
+                                "internalType": "uint256",
+                                "name": "timestamp",
+                                "type": "uint256"
+                            }
+                        ],
+                        "internalType": "struct TipJar.Tip[]",
+                        "name": "",
+                        "type": "tuple[]"
+                    }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
+                "inputs": [],
+                "name": "getContractBalance",
+                "outputs": [
+                    {
+                        "internalType": "uint256",
+                        "name": "",
+                        "type": "uint256"
+                    }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
+                "inputs": [
+                    {
+                        "internalType": "uint256",
+                        "name": "_index",
+                        "type": "uint256"
+                    }
+                ],
+                "name": "getTip",
+                "outputs": [
+                    {
+                        "internalType": "address",
+                        "name": "",
+                        "type": "address"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "string",
+                        "name": "",
+                        "type": "string"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "",
+                        "type": "uint256"
+                    }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
+                "inputs": [],
+                "name": "getTipCount",
+                "outputs": [
+                    {
+                        "internalType": "uint256",
+                        "name": "",
+                        "type": "uint256"
+                    }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
+                "inputs": [],
+                "name": "owner",
+                "outputs": [
+                    {
+                        "internalType": "address",
+                        "name": "",
+                        "type": "address"
+                    }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
+                "inputs": [
+                    {
+                        "internalType": "string",
+                        "name": "_message",
+                        "type": "string"
+                    }
+                ],
+                "name": "sendTip",
+                "outputs": [],
+                "stateMutability": "payable",
+                "type": "function"
+            },
+            {
+                "inputs": [
+                    {
+                        "internalType": "address",
+                        "name": "_newOwner",
+                        "type": "address"
+                    }
+                ],
+                "name": "transferOwnership",
+                "outputs": [],
+                "stateMutability": "nonpayable",
+                "type": "function"
+            },
+            {
+                "inputs": [],
+                "name": "withdrawFunds",
+                "outputs": [],
+                "stateMutability": "nonpayable",
+                "type": "function"
+            },
+            {
+                "stateMutability": "payable",
+                "type": "receive"
+            }
+        ];
+
+        // Contract address
+        const contractAddress = "0x9A9F08aca75e4CeAb4e769975435534Bc02b41BA";
+
+        // Global variables
+        let provider;
+        let signer;
+        let contract;
+        let connectedWallet = null;
+
+        // DOM Elements
+        const connectWalletBtn = document.getElementById('connectWallet');
+        const sendTipBtn = document.getElementById('sendTip');
+        const refreshTipsBtn = document.getElementById('refreshTips');
+        const tipsList = document.getElementById('tipsList');
+        const contractBalanceEl = document.getElementById('contractBalance');
+        const themeToggleBtn = document.getElementById('themeToggle');
+        const transactionModal = document.getElementById('transactionModal');
+        const modalTitle = document.getElementById('modalTitle');
+        const modalMessage = document.getElementById('modalMessage');
+        const modalSpinner = document.getElementById('modalSpinner');
+        const modalSuccess = document.getElementById('modalSuccess');
+        const modalError = document.getElementById('modalError');
+        const modalAction = document.getElementById('modalAction');
+        const closeModalBtn = document.getElementById('closeModal');
+
+        // Initialize the app
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check for saved theme preference
+            if (localStorage.getItem('darkMode') === 'true') {
+                document.documentElement.classList.add('dark');
+            }
+
+            // Initialize ethers.js
+            if (window.ethereum) {
+                provider = new ethers.providers.Web3Provider(window.ethereum);
+                contract = new ethers.Contract(contractAddress, contractABI, provider);
+                
+                // Check if wallet is already connected
+                checkConnectedWallet();
+                
+                // Listen for account changes
+                window.ethereum.on('accountsChanged', (accounts) => {
+                    if (accounts.length > 0) {
+                        connectedWallet = accounts[0];
+                        updateWalletButton();
+                        loadContractData();
+                    } else {
+                        connectedWallet = null;
+                        updateWalletButton();
+                    }
+                });
+                
+                // Listen for chain changes
+                window.ethereum.on('chainChanged', () => {
+                    window.location.reload();
+                });
+            } else {
+                alert('Please install MetaMask or another Ethereum wallet to use this dApp!');
+            }
+
+            // Load initial data
+            loadContractData();
+        });
+
+        // Event Listeners
+        connectWalletBtn.addEventListener('click', connectWallet);
+        sendTipBtn.addEventListener('click', sendTip);
+        refreshTipsBtn.addEventListener('click', loadContractData);
+        themeToggleBtn.addEventListener('click', toggleTheme);
+        closeModalBtn.addEventListener('click', () => {
+            transactionModal.classList.add('hidden');
+        });
+        modalAction.addEventListener('click', () => {
+            transactionModal.classList.add('hidden');
+        });
+
+        // Functions
+        async function checkConnectedWallet() {
+            try {
+                const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+                if (accounts.length > 0) {
+                    connectedWallet = accounts[0];
+                    signer = provider.getSigner();
+                    contract = contract.connect(signer);
+                    updateWalletButton();
+                }
+            } catch (error) {
+                console.error('Error checking connected wallet:', error);
+            }
+        }
+
+        async function connectWallet() {
+            if (!window.ethereum) {
+                alert('Please install MetaMask or another Ethereum wallet to use this dApp!');
+                return;
+            }
+
+            try {
+                // Request account access
+                const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                connectedWallet = accounts[0];
+                signer = provider.getSigner();
+                contract = contract.connect(signer);
+                updateWalletButton();
+                loadContractData();
+            } catch (error) {
+                console.error('Error connecting wallet:', error);
+                showModal('Error', 'Failed to connect wallet: ' + error.message, 'error');
+            }
+        }
+
+        function updateWalletButton() {
+            if (connectedWallet) {
+                const shortAddress = `${connectedWallet.substring(0, 6)}...${connectedWallet.substring(38)}`;
+                connectWalletBtn.innerHTML = `<i class="fas fa-check-circle mr-2"></i>${shortAddress}`;
+                connectWalletBtn.classList.remove('bg-indigo-600', 'hover:bg-indigo-700');
+                connectWalletBtn.classList.add('bg-green-600', 'hover:bg-green-700');
+            } else {
+                connectWalletBtn.innerHTML = '<i class="fas fa-wallet mr-2"></i>Connect Wallet';
+                connectWalletBtn.classList.remove('bg-green-600', 'hover:bg-green-700');
+                connectWalletBtn.classList.add('bg-indigo-600', 'hover:bg-indigo-700');
+            }
+        }
+
+        async function loadContractData() {
+            try {
+                // Show loading state
+                tipsList.innerHTML = `
+                    <div class="text-center py-8">
+                        <i class="fas fa-spinner fa-spin text-2xl text-gray-400"></i>
+                        <p class="mt-2 text-gray-500 dark:text-gray-400">Loading tips...</p>
+                    </div>
+                `;
+
+                // Get contract balance
+                const balance = await contract.getContractBalance();
+                const balanceInEth = ethers.utils.formatEther(balance);
+                contractBalanceEl.textContent = `${parseFloat(balanceInEth).toFixed(4)} MON`;
+
+                // Get all tips
+                const tips = await contract.getAllTips();
+                
+                if (tips.length === 0) {
+                    tipsList.innerHTML = `
+                        <div class="text-center py-8">
+                            <i class="fas fa-inbox text-2xl text-gray-400"></i>
+                            <p class="mt-2 text-gray-500 dark:text-gray-400">No tips yet. Be the first to send one!</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                // Display tips in reverse order (newest first)
+                tipsList.innerHTML = '';
+                [...tips].reverse().forEach((tip, index) => {
+                    const date = new Date(tip.timestamp * 1000);
+                    const formattedDate = date.toLocaleString();
+                    const amountInEth = ethers.utils.formatEther(tip.amount);
+                    const shortAddress = `${tip.sender.substring(0, 6)}...${tip.sender.substring(38)}`;
+                    
+                    const tipCard = document.createElement('div');
+                    tipCard.className = 'tip-card bg-gray-50 dark:bg-gray-700 rounded-lg p-4';
+                    tipCard.innerHTML = `
+                        <div class="flex justify-between items-start">
+                            <div class="flex-1">
+                                <p class="text-gray-800 dark:text-white">${tip.message || 'No message'}</p>
+                                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">From: ${shortAddress}</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="font-semibold text-indigo-600 dark:text-indigo-400">${parseFloat(amountInEth).toFixed(4)} MON</p>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">${formattedDate}</p>
+                            </div>
+                        </div>
+                    `;
+                    
+                    tipsList.appendChild(tipCard);
+                });
+            } catch (error) {
+                console.error('Error loading contract data:', error);
+                tipsList.innerHTML = `
+                    <div class="text-center py-8">
+                        <i class="fas fa-exclamation-triangle text-2xl text-red-400"></i>
+                        <p class="mt-2 text-gray-500 dark:text-gray-400">Failed to load tips. Please try again.</p>
+                    </div>
+                `;
+            }
+        }
+
+        async function sendTip() {
+            if (!connectedWallet) {
+                showModal('Wallet Not Connected', 'Please connect your wallet first to send a tip.', 'error');
+                return;
+            }
+
+            const message = document.getElementById('tipMessage').value;
+            const amount = document.getElementById('tipAmount').value;
+
+            if (!amount || parseFloat(amount) <= 0) {
+                showModal('Invalid Amount', 'Please enter a valid tip amount (greater than 0 MON).', 'error');
+                return;
+            }
+
+            try {
+                showModal('Processing', 'Waiting for transaction confirmation...', 'loading');
+                
+                const amountInWei = ethers.utils.parseEther(amount.toString());
+                const tx = await contract.sendTip(message || '', { value: amountInWei });
+                
+                showModal('Processing', 'Transaction submitted. Waiting for confirmation...', 'loading');
+                
+                const receipt = await tx.wait();
+                
+                if (receipt.status === 1) {
+                    showModal('Success', 'Tip sent successfully! Thank you for your support.', 'success');
+                    // Clear form
+                    document.getElementById('tipMessage').value = '';
+                    document.getElementById('tipAmount').value = '';
+                    // Refresh data
+                    loadContractData();
+                } else {
+                    showModal('Error', 'Transaction failed. Please try again.', 'error');
+                }
+            } catch (error) {
+                console.error('Error sending tip:', error);
+                showModal('Error', 'Failed to send tip: ' + error.message, 'error');
+            }
+        }
+
+        function showModal(title, message, type) {
+            modalTitle.textContent = title;
+            modalMessage.textContent = message;
+            
+            // Reset all states
+            modalSpinner.classList.add('hidden');
+            modalSuccess.classList.add('hidden');
+            modalError.classList.add('hidden');
+            modalAction.classList.add('hidden');
+            
+            // Set appropriate state
+            if (type === 'loading') {
+                modalSpinner.classList.remove('hidden');
+            } else if (type === 'success') {
+                modalSuccess.classList.remove('hidden');
+                modalAction.classList.remove('hidden');
+                modalAction.textContent = 'Close';
+            } else if (type === 'error') {
+                modalError.classList.remove('hidden');
+                modalAction.classList.remove('hidden');
+                modalAction.textContent = 'Try Again';
+            }
+            
+            transactionModal.classList.remove('hidden');
+        }
+
+        function toggleTheme() {
+            const html = document.documentElement;
+            html.classList.toggle('dark');
+            
+            // Save preference to localStorage
+            const isDark = html.classList.contains('dark');
+            localStorage.setItem('darkMode', isDark);
+        }
+    </script>
+</body>
+</html>
